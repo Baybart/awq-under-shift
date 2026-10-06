@@ -1,0 +1,15 @@
+## Overview
+
+This project reimplements AWQ from scratch and conducts experiments to evaluate whether AWQ's robustness claims are true.
+
+## Planned Experiments
+
+- Domain specific evaluation. We will test perplexity of AWQ, RTN and FP16 on a domain specific test set and observe whether AWQ degrades.
+- Calibration ablation study. We'll quantize the model once with generic data, and once with domain specific data, and compare quality on a test set in the domain.
+
+## References
+
+- Lin et al., "AWQ: Activation-aware Weight Quantization for On-Device LLM 
+  Compression and Acceleration," MLSys 2024 (Best Paper). 
+  [arXiv:2306.00978](https://arxiv.org/abs/2306.00978) · 
+  [mit-han-lab/llm-awq](https://github.com/mit-han-lab/llm-awq)
