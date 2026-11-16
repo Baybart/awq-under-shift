@@ -7,14 +7,45 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 # Model being evaluated
 MODEL = "Qwen/Qwen2.5-0.5B"
 
-def get_wikitext2():
-    test = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split = "test")
-    print(test.column_names)
+DOMAINS = {
+    "pubmed":  ("PubMed Abstracts", "text"),
+    "enron":   ("Enron Emails", "text"),
+    "freelaw": ("FreeLaw", "text"),
+    "github":  ("Github", "text"),
+}
+
+def get_domain(name, kind):
+    subset, fields = DOMAINS[name]
+
+    ds = load_dataset("ArmelR/the-pile-splitted", subset, split="train", streaming=True)
+
+    budget = 4000000
+
+    texts, total = [], 0
+
+    if kind == "calib":
+        for row in ds.take(200):
+            texts.append(row["text"])
+    else:
+        for row in ds.skip(200):
+            texts.append(row["text"])
+            total += (len(row["text"]))
+            if total >= budget:
+                break
+    
+    joined_text = "\n\n".join(texts)
+    return joined_text
+
+
+
+def get_wikitext2(split = "test"):
+    text = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split = split)
+    # print(test.column_names)
     # Joining in the same manner as AWQ paper to get matching results
     # We join rows into a single line, seperated by "\n\n"
-    joined_test = "\n\n".join(test["text"])
+    joined_text = "\n\n".join(text["text"])
 
-    return joined_test
+    return joined_text
 
 def tokenize(dataset):
     tokenizer = AutoTokenizer.from_pretrained(MODEL)

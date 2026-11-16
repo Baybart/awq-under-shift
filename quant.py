@@ -2,10 +2,33 @@ import torch
 import os
 from utils import perp_eval, get_wikitext2, tokenize, fetch_model
 
-def quantize_rtn(W, n_bits=4, group_size=128):
+def pack_int4(codes):
+    per_code = torch.reshape(codes, (codes.size(0), codes.size(1), codes.size(2)//8, 8))
+    shifts = torch.tensor([0,4,8,12,16,20,24,28], dtype=torch.int32)
+
+    shifted = ((per_code + 8) << shifts).sum(-1)
+
+    return shifted
+
+
+def unpack_int4(packed):
+    shifts = torch.tensor([0,4,8,12,16,20,24,28], dtype=torch.int32)
+
+    shifted = (packed.unsqueeze(-1) >> shifts) & 0xF
+    shifted = shifted -8
+
+    unpacked = torch.reshape(shifted, (packed.size(0), packed.size(1), packed.size(2)*8))
+
+    return unpacked
+
+def quantize_rtn(W, n_bits=4, group_size=128, return_parts = False):
     W3 = torch.reshape(W, (W.size(0), W.size(1)//group_size, group_size))
     W_d = torch.amax(W3.abs(), -1, keepdim = True) / pow(2,(n_bits-1))
+    if return_parts:
+        codes = torch.clamp(torch.round(W3/W_d), -pow(2,(n_bits-1)), pow(2,(n_bits-1))-1).to(torch.int32)
+        return codes, W_d
     W_hat = W_d * torch.clamp(torch.round(W3/W_d), -pow(2,(n_bits-1)), pow(2,(n_bits-1))-1)
+    
     return W_hat.reshape(W.shape)
 
 def calibrate_awq(model, input_ids, seq_ct = 16, token_ct = 512):
