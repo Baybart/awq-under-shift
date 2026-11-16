@@ -4,8 +4,6 @@ import math
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-# Model being evaluated
-MODEL = "Qwen/Qwen2.5-0.5B"
 
 DOMAINS = {
     "pubmed":  ("PubMed Abstracts", "text"),
@@ -47,15 +45,14 @@ def get_wikitext2(split = "test"):
 
     return joined_text
 
-def tokenize(dataset):
-    tokenizer = AutoTokenizer.from_pretrained(MODEL)
+def tokenize(dataset, name):
+    tokenizer = AutoTokenizer.from_pretrained(name)
     encodings = tokenizer(dataset, return_tensors = "pt")
     
     return encodings
 
-def fetch_model():
-    if MODEL == "Qwen/Qwen2.5-0.5B":
-        return AutoModelForCausalLM.from_pretrained("Qwen/Qwen2.5-0.5B")
+def fetch_model(name="Qwen/Qwen2.5-0.5B"):
+    return AutoModelForCausalLM.from_pretrained(name, torch_dtype=torch.float16, device_map={"": 0})
 
     
 # Note this this eval is done with stride = seqlen
@@ -68,7 +65,7 @@ def perp_eval(model, input_ids, seqlen = 2048, max_segments = None):
 
     nll_sum = 0.0
     while(seq_id*seqlen < token_ct and (max_segments is None or seq_id < max_segments)):
-        print(seq_id)
+        # print(seq_id)
         seq_input_ids = input_ids[:, seq_id*seqlen:(seq_id+1)*seqlen]
 
         with torch.no_grad():

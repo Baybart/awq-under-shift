@@ -23,6 +23,6 @@ def test_pack_roundtrip():
 
 def test_parts_match_dequant():
     W = torch.randn(4, 256)
-    W_d, codes = quantize_rtn(W, 4, 128, return_parts=True)
+    codes, W_d = quantize_rtn(W, 4, 128, return_parts=True)
     codes_rt = unpack_int4(pack_int4(codes))
     assert torch.equal((W_d * codes_rt.float()).reshape(W.shape), quantize_rtn(W, 4, 128))

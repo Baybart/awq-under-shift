@@ -6,6 +6,8 @@ DOMAINS = ["pubmed", "enron", "freelaw", "github"]
 SEGS = 100  # eval segments per number
 DEV = "cuda"
 
+MODEL = "meta-llama/Llama-3.2-3B"
+
 def save(results, path="results.json"):
     with open(path, "w") as f:
         json.dump(results, f, indent=2)
@@ -18,17 +20,17 @@ def run():
     results = {}
 
     # tokenize every eval set once
-    evals = {"wikitext": tokenize(get_wikitext2("test"))["input_ids"].to(DEV)}
+    evals = {"wikitext": tokenize(get_wikitext2("test"), MODEL)["input_ids"].to(DEV)}
     for d in DOMAINS:
-        evals[d] = tokenize(get_domain(d, "eval"))["input_ids"].to(DEV)
+        evals[d] = tokenize(get_domain(d, "eval"), MODEL)["input_ids"].to(DEV)
 
     # FP16 row
-    model = fetch_model().to(DEV)
+    model = fetch_model(MODEL)
     for name, ids in evals.items():
         results[f"fp16/{name}"] = perp_eval(model, ids, max_segments=SEGS)
         print(f"fp16/{name}: {results[f'fp16/{name}']:.3f}"); save(results)
 
-    calib_wiki = tokenize(get_wikitext2("train"))["input_ids"].to(DEV)
+    calib_wiki = tokenize(get_wikitext2("train"), MODEL)["input_ids"].to(DEV)
     s_X, X = calibrate_awq(model, calib_wiki)
 
     # RTN row
@@ -40,7 +42,7 @@ def run():
     del model; torch.cuda.empty_cache()
 
     # AWQ generic-calibration row
-    model = fetch_model().to(DEV)
+    model = fetch_model(MODEL)
     apply_awq(model, X, s_X)
     del X, s_X
     for name, ids in evals.items():
@@ -50,8 +52,8 @@ def run():
 
     # AWQ matched-calibration diagonal
     for d in DOMAINS:
-        model = fetch_model().to(DEV)
-        calib_ids = tokenize(get_domain(d, "calib"))["input_ids"].to(DEV)
+        model = fetch_model(MODEL)
+        calib_ids = tokenize(get_domain(d, "calib"), MODEL)["input_ids"].to(DEV)
         s_X, X = calibrate_awq(model, calib_ids)
         apply_awq(model, X, s_X)
         del X, s_X

@@ -36,7 +36,7 @@ def calibrate_awq(model, input_ids, seq_ct = 16, token_ct = 512):
 
     def make_hook(name):
         def calibration_hook(module, inputs, outputs):
-            X[name].append(inputs[0].detach().half().reshape(-1, module.weight.shape[1]))
+            X[name].append(inputs[0].detach().half().reshape(-1, module.weight.shape[1]).cpu())
 
         return calibration_hook
 
@@ -64,7 +64,8 @@ def calibrate_awq(model, input_ids, seq_ct = 16, token_ct = 512):
     return s_X, X
 
 def search_alpha(W, X, s_x, n_bits = 4, group_size = 128, n_grid = 20):
-    Xf = X.float()
+    Xf = X.float().to(W.device)
+    s_x = s_x.to(W.device)
     Wf = W.float()
     Y = Xf @ Wf.T
 
